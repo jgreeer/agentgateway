@@ -1,8 +1,8 @@
-use aws_lc_rs::constant_time::verify_slices_are_equal;
 use base64::Engine;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use subtle::ConstantTimeEq;
 
 use crate::http::Request;
 use crate::proxy::httpproxy::PolicyClient;
@@ -53,7 +53,7 @@ pub(super) fn start_login(
 	let nonce = generate_nonce();
 	let pkce_verifier = generate_pkce_verifier();
 	let code_challenge = {
-		let digest = aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA256, pkce_verifier.as_bytes());
+		let digest = symcrypt::hash::sha256(pkce_verifier.as_bytes());
 		base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(digest.as_ref())
 	};
 	let original_uri = normalize_original_uri(req.uri().path_and_query());
@@ -179,5 +179,5 @@ fn with_query(uri: &super::ProviderEndpoint, params: &[(&str, String)]) -> Strin
 }
 
 fn constant_time_str_eq(expected: &str, actual: &str) -> bool {
-	verify_slices_are_equal(expected.as_bytes(), actual.as_bytes()).is_ok()
+	expected.as_bytes().ct_eq(actual.as_bytes()).into()
 }

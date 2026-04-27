@@ -6,12 +6,8 @@ use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use cel::ExecutionError;
 use cel::context::{SingleVarResolver, VariableResolver};
 use cel::objects::KeyRef;
-use md5::Md5;
 use rand::random_range;
 use serde::Deserializer;
-use sha1::Sha1;
-use sha2::Sha256;
-use sha2::digest::Digest;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -79,24 +75,31 @@ pub fn base64_decode<'a>(ftx: &mut FunctionContext<'a, '_>, v: Argument) -> Reso
 		.map_err(|e| ftx.error(e))
 }
 
-fn hash_encode<'a, D>(ftx: &mut FunctionContext<'a, '_>, v: Argument) -> ResolveResult<'a>
-where
-	D: Digest,
-{
+fn hash_encode_sha256<'a>(ftx: &mut FunctionContext<'a, '_>, v: Argument) -> ResolveResult<'a> {
 	let v = v.load(ftx)?.always_materialize_owned();
-	Ok(hex::encode(D::digest(v.as_bytes_pre_materialized()?)).into())
+	Ok(hex::encode(symcrypt::hash::sha256(v.as_bytes_pre_materialized()?)).into())
+}
+
+fn hash_encode_sha1<'a>(ftx: &mut FunctionContext<'a, '_>, v: Argument) -> ResolveResult<'a> {
+	let v = v.load(ftx)?.always_materialize_owned();
+	Ok(hex::encode(symcrypt::hash::sha1(v.as_bytes_pre_materialized()?)).into())
+}
+
+fn hash_encode_md5<'a>(ftx: &mut FunctionContext<'a, '_>, v: Argument) -> ResolveResult<'a> {
+	let v = v.load(ftx)?.always_materialize_owned();
+	Ok(hex::encode(symcrypt::hash::md5(v.as_bytes_pre_materialized()?)).into())
 }
 
 pub fn sha256_encode<'a>(ftx: &mut FunctionContext<'a, '_>, v: Argument) -> ResolveResult<'a> {
-	hash_encode::<Sha256>(ftx, v)
+	hash_encode_sha256(ftx, v)
 }
 
 pub fn sha1_encode<'a>(ftx: &mut FunctionContext<'a, '_>, v: Argument) -> ResolveResult<'a> {
-	hash_encode::<Sha1>(ftx, v)
+	hash_encode_sha1(ftx, v)
 }
 
 pub fn md5_encode<'a>(ftx: &mut FunctionContext<'a, '_>, v: Argument) -> ResolveResult<'a> {
-	hash_encode::<Md5>(ftx, v)
+	hash_encode_md5(ftx, v)
 }
 
 fn with<'a, 'rf, 'b>(

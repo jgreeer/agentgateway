@@ -7,7 +7,6 @@ use std::collections::HashMap;
 
 use base64::prelude::BASE64_STANDARD;
 use base64::Engine;
-use sha1::{Digest, Sha1};
 
 use crate::md5::APR1_ID;
 
@@ -76,7 +75,7 @@ impl<'a> Hash<'a> {
 		match self {
 			Hash::MD5(hash) => md5::md5_apr1_encode(password, &hash.salt).as_str() == hash.hash,
 			Hash::BCrypt(hash) => bcrypt::verify(password, hash).unwrap(),
-			Hash::SHA1(hash) => BASE64_STANDARD.encode(Sha1::digest(password)).as_str() == *hash,
+			Hash::SHA1(hash) => BASE64_STANDARD.encode(symcrypt::hash::sha1(password.as_bytes())).as_str() == *hash,
 			Hash::Crypt(hash) => pwhash::unix_crypt::verify(password, hash),
 		}
 	}

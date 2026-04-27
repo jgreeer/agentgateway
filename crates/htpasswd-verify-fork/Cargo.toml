@@ -13,4 +13,4 @@ base64.workspace = true
 bcrypt.workspace = true
 md-5.workspace = true
 pwhash.workspace = true
-sha1.workspace = true
+symcrypt.workspace = true

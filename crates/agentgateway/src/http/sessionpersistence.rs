@@ -151,56 +151,70 @@ mod base64 {
 }
 
 mod aes {
-	use aws_lc_rs::aead::{AES_256_GCM, Aad, Nonce, RandomizedNonceKey};
 	use base64::Engine;
 	use base64::engine::general_purpose::STANDARD;
+	use symcrypt::cipher::BlockCipherType;
+	use symcrypt::gcm::GcmExpandedKey;
 
-	#[derive(Debug)]
+	const NONCE_LEN: usize = 12;
+	const TAG_LEN: usize = 16;
+
 	pub struct Encoder {
-		key: RandomizedNonceKey,
+		key: GcmExpandedKey,
+	}
+
+	impl std::fmt::Debug for Encoder {
+		fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+			f.debug_struct("Encoder").field("key", &"[redacted]").finish()
+		}
 	}
 
 	impl Encoder {
 		/// Create from a 32-byte key
 		pub fn new(key: &[u8]) -> Result<Self, Error> {
-			let key = RandomizedNonceKey::new(&AES_256_GCM, key).map_err(|_| Error::InvalidKey)?;
+			let key =
+				GcmExpandedKey::new(key, BlockCipherType::AesBlock).map_err(|_| Error::InvalidKey)?;
 			Ok(Self { key })
 		}
 
 		/// Encrypt and base64 encode
 		pub fn encrypt(&self, plaintext: &str) -> Result<String, Error> {
-			let mut in_out: Vec<u8> = plaintext.as_bytes().to_vec();
-			// Seal automatically generates a random nonce and prepends it
-			let nonce = self
-				.key
-				.seal_in_place_append_tag(Aad::empty(), &mut in_out)
-				.map_err(|_| Error::EncryptionFailed)?;
+			let mut buffer = plaintext.as_bytes().to_vec();
+			let mut nonce = [0u8; NONCE_LEN];
+			symcrypt::symcrypt_random(&mut nonce);
+			let mut tag = [0u8; TAG_LEN];
 
-			// Format: nonce || ciphertext+tag
-			let mut result = nonce.as_ref().to_vec();
-			result.extend_from_slice(&in_out);
-			// Base64 encode
+			self.key
+				.encrypt_in_place(&nonce, &[], &mut buffer, &mut tag);
+
+			// Format: nonce || ciphertext || tag
+			let mut result = Vec::with_capacity(NONCE_LEN + buffer.len() + TAG_LEN);
+			result.extend_from_slice(&nonce);
+			result.extend_from_slice(&buffer);
+			result.extend_from_slice(&tag);
 			Ok(STANDARD.encode(&result))
 		}
 
 		/// Decode and decrypt
 		pub fn decrypt(&self, encoded: &str) -> Result<Vec<u8>, Error> {
-			// Base64 decode
 			let data = STANDARD.decode(encoded).map_err(|_| Error::InvalidFormat)?;
-			if data.len() < 12 {
+			if data.len() < NONCE_LEN + TAG_LEN {
 				return Err(Error::InvalidFormat);
 			}
 
-			// Extract nonce and ciphertext
-			let (nonce_bytes, ciphertext) = data.split_at(12);
-			let nonce =
-				Nonce::try_assume_unique_for_key(nonce_bytes).map_err(|_| Error::InvalidFormat)?;
-			let mut in_out = ciphertext.to_vec();
-			let plaintext = self
-				.key
-				.open_in_place(nonce, Aad::empty(), &mut in_out)
+			let (nonce_bytes, rest) = data.split_at(NONCE_LEN);
+			let (ciphertext, tag_bytes) = rest.split_at(rest.len() - TAG_LEN);
+
+			let mut nonce = [0u8; NONCE_LEN];
+			nonce.copy_from_slice(nonce_bytes);
+			let mut tag = [0u8; TAG_LEN];
+			tag.copy_from_slice(tag_bytes);
+			let mut buffer = ciphertext.to_vec();
+
+			self.key
+				.decrypt_in_place(&nonce, &[], &mut buffer, &mut tag)
 				.map_err(|_| Error::DecryptionFailed)?;
-			Ok(plaintext.to_vec())
+			Ok(buffer)
 		}
 	}
 

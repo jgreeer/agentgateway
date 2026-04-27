@@ -25,26 +25,26 @@ pub static ALL_TLS_VERSIONS: &[&rustls::SupportedProtocolVersion] =
 /// All currently supported cipher suites.
 pub static ALL_CIPHER_SUITES: &[SupportedCipherSuite] = &[
 	// TLS 1.3 cipher suites
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS13_AES_256_GCM_SHA384,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS13_AES_128_GCM_SHA256,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS13_CHACHA20_POLY1305_SHA256,
+	rustls_symcrypt::TLS13_AES_256_GCM_SHA384,
+	rustls_symcrypt::TLS13_AES_128_GCM_SHA256,
+	rustls_symcrypt::TLS13_CHACHA20_POLY1305_SHA256,
 	// TLS 1.2 cipher suites
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+	rustls_symcrypt::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+	rustls_symcrypt::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+	rustls_symcrypt::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+	rustls_symcrypt::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	rustls_symcrypt::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	rustls_symcrypt::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
 ];
 
 // Default cipher suites to use if user does not specify cipher suites
 pub static DEFAULT_CIPHER_SUITES: &[SupportedCipherSuite] = &[
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS13_AES_256_GCM_SHA384,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS13_AES_128_GCM_SHA256,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-	rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	rustls_symcrypt::TLS13_AES_256_GCM_SHA384,
+	rustls_symcrypt::TLS13_AES_128_GCM_SHA256,
+	rustls_symcrypt::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+	rustls_symcrypt::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+	rustls_symcrypt::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	rustls_symcrypt::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -104,44 +104,43 @@ impl CipherSuite {
 		match self {
 			// TLS 1.3 cipher suites
 			CipherSuite::TLS_AES_256_GCM_SHA384 => {
-				rustls::crypto::aws_lc_rs::cipher_suite::TLS13_AES_256_GCM_SHA384
+				rustls_symcrypt::TLS13_AES_256_GCM_SHA384
 			},
 			CipherSuite::TLS_AES_128_GCM_SHA256 => {
-				rustls::crypto::aws_lc_rs::cipher_suite::TLS13_AES_128_GCM_SHA256
+				rustls_symcrypt::TLS13_AES_128_GCM_SHA256
 			},
 			CipherSuite::TLS_CHACHA20_POLY1305_SHA256 => {
-				rustls::crypto::aws_lc_rs::cipher_suite::TLS13_CHACHA20_POLY1305_SHA256
+				rustls_symcrypt::TLS13_CHACHA20_POLY1305_SHA256
 			},
 
 			// TLS 1.2 cipher suites
 			CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 => {
-				rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+				rustls_symcrypt::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
 			},
 			CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 => {
-				rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+				rustls_symcrypt::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
 			},
 			CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 => {
-				rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+				rustls_symcrypt::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
 			},
 			CipherSuite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 => {
-				rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+				rustls_symcrypt::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
 			},
 			CipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 => {
-				rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+				rustls_symcrypt::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
 			},
 			CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 => {
-				rustls::crypto::aws_lc_rs::cipher_suite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+				rustls_symcrypt::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
 			},
 		}
 	}
 }
 
 pub fn provider() -> Arc<CryptoProvider> {
-	Arc::new(CryptoProvider {
-		// Restrict negotiation to our allowlist.
-		cipher_suites: DEFAULT_CIPHER_SUITES.to_vec(),
-		..rustls::crypto::aws_lc_rs::default_provider()
-	})
+	Arc::new(rustls_symcrypt::custom_symcrypt_provider(
+		Some(DEFAULT_CIPHER_SUITES.to_vec()),
+		None,
+	))
 }
 
 pub fn provider_with_cipher_suites(
@@ -151,22 +150,11 @@ pub fn provider_with_cipher_suites(
 	for suite in cipher_suites {
 		out.push(suite.to_supported_cipher_suite());
 	}
-	Ok(Arc::new(CryptoProvider {
-		cipher_suites: out,
-		..rustls::crypto::aws_lc_rs::default_provider()
-	}))
+	Ok(Arc::new(rustls_symcrypt::custom_symcrypt_provider(
+		Some(out),
+		None,
+	)))
 }
-
-// pub fn provider() -> Arc<CryptoProvider> {
-// 	Arc::new(CryptoProvider {
-// 		// Limit to only the subset of ciphers that are FIPS compatible
-// 		cipher_suites: vec![
-// 			rustls::crypto::ring::cipher_suite::TLS13_AES_256_GCM_SHA384,
-// 			rustls::crypto::ring::cipher_suite::TLS13_AES_128_GCM_SHA256,
-// 		],
-// 		..rustls::crypto::ring::default_provider()
-// 	})
-// }
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {

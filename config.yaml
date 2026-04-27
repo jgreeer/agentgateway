@@ -1,0 +1,9 @@
+llm:
+  models:
+      - name: my-azure-model
+        provider: azureOpenAI
+        params:
+          model: gpt-4o
+          azureResourceName: my-endpoint
+          azureResourceType: openAI
+          azureApiVersion: v1
