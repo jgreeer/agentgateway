@@ -1844,6 +1844,7 @@ pub fn build_service_call(
 			http_version_override,
 			transport_override: None,
 			network_gateway: None,
+			waypoint: None,
 			backend_policies,
 		});
 	}
@@ -1910,70 +1911,34 @@ pub fn build_service_call(
 
 	// Check if the service has ingress_use_waypoint set and a waypoint configured.
 	// When set, route traffic through the waypoint instead of directly to the workload.
-	let waypoint = if svc.ingress_use_waypoint {
-		if let Some(wp) = &svc.waypoint {
-			let wp_ip = match &wp.destination {
-				types::discovery::gatewayaddress::Destination::Address(net_addr) => {
-					Some(net_addr.address)
-				},
-				types::discovery::gatewayaddress::Destination::Hostname(nh) => {
-					// Resolve hostname-based waypoint via service discovery
-					let discovery = inputs.stores.read_discovery();
-					discovery
-						.services
-						.get_by_namespaced_host(&NamespacedHostname {
-							namespace: nh.namespace.clone(),
-							hostname: nh.hostname.clone(),
-						})
-						.and_then(|wp_svc| {
-							wp_svc
-								.vips
-								.iter()
-								.find(|v| v.network == inputs.cfg.network)
-								.or_else(|| wp_svc.vips.first())
-								.map(|v| v.address)
-						})
-				},
-			};
-			match wp_ip {
-				Some(ip) => {
-					let wp_port = if wp.hbone_mtls_port > 0 {
-						wp.hbone_mtls_port
-					} else {
-						15008
-					};
-					tracing::debug!(
-						service = %svc.hostname,
-						waypoint = %ip,
-						waypoint_port = %wp_port,
-						"ingress_use_waypoint: routing through waypoint"
-					);
-					Some(WaypointTarget {
-						address: SocketAddr::new(ip, wp_port),
-						identities: workload_and_service_sans(&wl, svc),
-					})
-				},
-				None => {
-					tracing::warn!(
-						service = %svc.hostname,
-						"ingress_use_waypoint set but waypoint address could not be resolved"
-					);
-					None
-				},
-			}
-		} else {
-			None
+	// We also skip when this gateway IS the waypoint for the service (loop prevention).
+	let waypoint = if svc.ingress_use_waypoint && !is_self_the_waypoint(inputs, svc) {
+		match build_ingress_waypoint_routing(inputs, svc) {
+			Some(wp) => {
+				tracing::debug!(
+					service = %svc.hostname,
+					waypoint = %wp.address,
+					"ingress_use_waypoint: routing through waypoint"
+				);
+				Some(wp)
+			},
+			None => {
+				tracing::warn!(
+					service = %svc.hostname,
+					"ingress_use_waypoint set but waypoint could not be resolved; routing directly"
+				);
+				None
+			},
 		}
 	} else {
 		None
 	};
 
 	// For double HBONE, use hostname-based target so the gateway can resolve it
-	// For waypoint routing, also use hostname-based target so the waypoint can identify the service
-	let target = if waypoint.is_some() {
-		// Use service hostname as the target: the HBONE CONNECT URI authority
-		// will contain the service hostname so the waypoint can route correctly.
-		Target::Hostname(svc.hostname.clone(), port)
+	// For waypoint routing, use the service VIP as the target so the HBONE CONNECT
+	// authority is an IP:port (the AGW waypoint inbound looks up services by VIP).
+	let target = if let Some(wp) = &waypoint {
+		Target::Address(SocketAddr::new(wp.service_vip, port))
 	} else if network_gateway.is_some() {
 		tracing::debug!(
 			hostname=%svc.hostname,
@@ -2034,6 +1999,130 @@ fn select_service_target_port(
 		return Some(svc_target_port);
 	}
 	None
+}
+
+/// Returns true if this gateway instance is the waypoint for the given service.
+/// Used to prevent waypoints from redirecting traffic back to themselves.
+fn is_self_the_waypoint(inputs: &ProxyInputs, svc: &Service) -> bool {
+	let Some(self_id) = inputs.cfg.self_addr.as_ref() else {
+		return false;
+	};
+	let Some(wp) = svc.waypoint.as_ref() else {
+		return false;
+	};
+	match &wp.destination {
+		gatewayaddress::Destination::Hostname(nh) => self_id.matches_hostname(nh),
+		gatewayaddress::Destination::Address(addr) => {
+			let stores = inputs.stores.clone();
+			self_id.matches_address(addr, |ns, hostname| {
+				let nh = NamespacedHostname {
+					namespace: ns.clone(),
+					hostname: hostname.clone(),
+				};
+				stores
+					.read_discovery()
+					.services
+					.get_by_namespaced_host(&nh)
+					.map(|s| s.vips.iter().cloned().collect())
+			})
+		},
+	}
+}
+
+/// Builds ingress-to-waypoint routing info for a service.
+/// Returns `None` if the waypoint is not reachable or its identity is unknown.
+fn build_ingress_waypoint_routing(inputs: &ProxyInputs, svc: &Service) -> Option<WaypointTarget> {
+	let wp = svc.waypoint.as_ref()?;
+
+	// 1. Resolve the waypoint physical IP. Address: direct; Hostname: resolve via service VIP.
+	let waypoint_ip = match &wp.destination {
+		gatewayaddress::Destination::Address(net_addr) => net_addr.address,
+		gatewayaddress::Destination::Hostname(nh) => {
+			let discovery = inputs.stores.read_discovery();
+			let wp_svc = discovery.services.get_by_namespaced_host(nh).or_else(|| {
+				tracing::warn!(
+					service = %svc.hostname,
+					waypoint = ?nh,
+					"waypoint service not found for ingress_use_waypoint"
+				);
+				None
+			})?;
+			wp_svc
+				.vips
+				.iter()
+				.find(|v| v.network == inputs.cfg.network)
+				.or_else(|| wp_svc.vips.first())
+				.map(|v| v.address)
+				.or_else(|| {
+					tracing::warn!(
+						service = %svc.hostname,
+						waypoint = ?nh,
+						"waypoint service has no VIPs for ingress_use_waypoint"
+					);
+					None
+				})?
+		},
+	};
+
+	let waypoint_port = if wp.hbone_mtls_port > 0 {
+		wp.hbone_mtls_port
+	} else {
+		15008
+	};
+	let waypoint_dst = SocketAddr::new(waypoint_ip, waypoint_port);
+
+	// 2. Resolve the waypoint's SPIFFE identity for mTLS verification.
+	// waypoint_ip can be either a pod IP (workload lookup) or a service VIP
+	// (service lookup, then walk endpoints to a backing workload).
+	let net_addr = NetworkAddress {
+		network: inputs.cfg.network.clone(),
+		address: waypoint_ip,
+	};
+	let identities = {
+		let discovery = inputs.stores.read_discovery();
+		if let Some(wl) = discovery.workloads.find_address(&net_addr) {
+			vec![wl.identity()]
+		} else if let Some(wp_svc) = discovery.services.get_by_vip(&net_addr) {
+			let identity = wp_svc.endpoints.iter().iter().find_map(|(ep, _info)| {
+				discovery
+					.workloads
+					.find_uid(&ep.workload_uid)
+					.map(|wl| wl.identity())
+			});
+			match identity {
+				Some(id) => vec![id],
+				None => {
+					tracing::warn!(
+						service = %svc.hostname,
+						waypoint_ip = %waypoint_ip,
+						"waypoint service has no endpoints; cannot determine mTLS identity"
+					);
+					return None;
+				},
+			}
+		} else {
+			tracing::warn!(
+				service = %svc.hostname,
+				waypoint_ip = %waypoint_ip,
+				"waypoint not found as workload or service VIP; cannot determine mTLS identity"
+			);
+			return None;
+		}
+	};
+
+	// 3. Pick the service VIP used as the HBONE CONNECT authority.
+	let service_vip = svc
+		.vips
+		.iter()
+		.find(|v| v.network == inputs.cfg.network)
+		.or_else(|| svc.vips.first())
+		.map(|v| v.address)?;
+
+	Some(WaypointTarget {
+		address: waypoint_dst,
+		service_vip,
+		identities,
+	})
 }
 
 /// Combines workload identity with service SANs.
@@ -2397,9 +2486,11 @@ pub struct BackendCall {
 
 /// Information needed to route through a waypoint proxy.
 pub struct WaypointTarget {
-	/// The socket address of the waypoint (IP:hbone_port).
+	/// The physical socket address of the waypoint (waypoint_ip:hbone_mtls_port).
 	pub address: SocketAddr,
-	/// Identities for mTLS verification (service SANs).
+	/// Service VIP used as the HBONE CONNECT authority so the waypoint can identify the service.
+	pub service_vip: std::net::IpAddr,
+	/// Expected SPIFFE identities of the waypoint, for mTLS verification.
 	pub identities: Vec<Identity>,
 }
 
