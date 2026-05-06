@@ -1230,10 +1230,7 @@ pub async fn build_transport(
 	// Check if we should route through a waypoint proxy (ingress_use_waypoint)
 	if let (Some(wp), Some(ca)) = (&backend_call.waypoint, &inputs.ca) {
 		if ca.get_identity().await.is_ok() {
-			tracing::debug!(
-				"using HBONE waypoint at {} for service",
-				wp.address
-			);
+			tracing::debug!("using HBONE waypoint at {} for service", wp.address);
 			return Ok(Transport::HboneWaypoint {
 				waypoint_address: wp.address,
 				identities: wp.identities.clone(),
@@ -1962,9 +1959,7 @@ pub fn build_service_call(
 		if let Some(wp) = &svc.waypoint {
 			let discovery = inputs.stores.read_discovery();
 			let wp_ip = match &wp.destination {
-				types::discovery::gatewayaddress::Destination::Address(net_addr) => {
-					Some(net_addr.address)
-				},
+				types::discovery::gatewayaddress::Destination::Address(net_addr) => Some(net_addr.address),
 				types::discovery::gatewayaddress::Destination::Hostname(nh) => {
 					// Resolve hostname-based waypoint via service discovery
 					discovery
@@ -2496,7 +2491,7 @@ pub struct BackendCall {
 	pub http_version_override: Option<::http::Version>,
 	pub transport_override: Option<(InboundProtocol, Vec<Identity>)>,
 	pub network_gateway: Option<(GatewayAddress, Identity)>, /* For double hbone: (gateway_address, gateway_identity) */
-	pub waypoint: Option<WaypointTarget>, /* For ingress waypoint routing */
+	pub waypoint: Option<WaypointTarget>,                    // For ingress waypoint routing
 	pub backend_policies: BackendPolicies,
 }
 

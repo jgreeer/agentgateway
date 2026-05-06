@@ -2750,9 +2750,9 @@ async fn ingress_use_waypoint_false_no_waypoint() {
 async fn ingress_use_waypoint_ip_based_waypoint() {
 	use crate::proxy::httpproxy;
 	use crate::store::LocalWorkload;
+	use crate::types::discovery::gatewayaddress::Destination;
 	use crate::types::discovery::{
 		GatewayAddress, NamespacedHostname, NetworkAddress, Service, Workload,
-		gatewayaddress::Destination,
 	};
 
 	let mock = simple_mock().await;

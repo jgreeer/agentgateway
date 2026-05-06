@@ -488,9 +488,8 @@ impl TestBind {
 		waypoint_addr: SocketAddr,
 	) -> Self {
 		use crate::store::LocalWorkload;
-		use crate::types::discovery::{
-			GatewayAddress, NetworkAddress, Service, Workload, gatewayaddress::Destination,
-		};
+		use crate::types::discovery::gatewayaddress::Destination;
+		use crate::types::discovery::{GatewayAddress, NetworkAddress, Service, Workload};
 
 		// Create the waypoint service so hostname resolution works
 		let wp_svc = Service {

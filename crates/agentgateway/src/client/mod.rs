@@ -93,8 +93,8 @@ pub enum Transport {
 	/// (VIP or hostname) so the waypoint can route, while the physical connection
 	/// goes to the waypoint address.
 	HboneWaypoint {
-		waypoint_address: SocketAddr,   // Physical address of waypoint (IP:hbone_port)
-		identities: Vec<Identity>,      // Service SANs for mTLS verification
+		waypoint_address: SocketAddr, // Physical address of waypoint (IP:hbone_port)
+		identities: Vec<Identity>,    // Service SANs for mTLS verification
 		inner: ApplicationTransport,
 	},
 }
@@ -336,13 +336,7 @@ impl Connector {
 					.hbone_pool
 					.clone()
 					.ok_or_else(|| crate::http::Error::new(anyhow::anyhow!("hbone pool disabled")))?;
-				hbone_tunnel::handshake_waypoint(
-					pool,
-					&target,
-					waypoint_address,
-					identities,
-				)
-				.await?
+				hbone_tunnel::handshake_waypoint(pool, &target, waypoint_address, identities).await?
 			},
 		};
 
