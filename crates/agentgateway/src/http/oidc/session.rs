@@ -9,6 +9,7 @@ use rand::RngExt;
 use secrecy::ExposeSecret;
 use secrecy::SecretString;
 use serde::{Serialize, Serializer};
+use symcrypt::hash::sha256;
 
 use super::{Error, PolicyId, now_unix};
 
@@ -223,9 +224,9 @@ pub enum CookieSecureMode {
 }
 
 pub(super) fn derive_cookie_names(policy_id: &PolicyId) -> (String, String) {
-	let digest = aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA256, policy_id.as_str().as_bytes());
+	let digest = sha256(policy_id.as_str().as_bytes());
 	let mut hex = String::with_capacity(32);
-	for byte in digest.as_ref().iter().take(8) {
+	for byte in digest.iter().take(8) {
 		let _ = write!(&mut hex, "{byte:02x}");
 	}
 	(
