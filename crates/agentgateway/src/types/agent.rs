@@ -311,7 +311,7 @@ impl ServerTLSConfig {
 		let provider = if cipher_suites.is_empty() {
 			crate::transport::tls::provider()
 		} else {
-			crate::transport::tls::provider_with_cipher_suites(cipher_suites)?
+					 crate::transport::tls::provider_with_cipher_suites(cipher_suites)?
 		};
 
 		let versions = tls_versions_for_range(min_version, max_version)?;
