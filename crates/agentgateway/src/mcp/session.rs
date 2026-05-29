@@ -151,7 +151,7 @@ impl Session {
 		log.non_atomic_mutate(|l| {
 			l.set_prompt(service_name.to_string(), prompt.to_string());
 		});
-		if !self.relay.policies.validate(
+		if !self.relay.target_policies(service_name).validate(
 			&rbac::ResourceType::Prompt(rbac::ResourceId::new(
 				service_name.to_string(),
 				prompt.to_string(),
@@ -179,7 +179,7 @@ impl Session {
 		log.non_atomic_mutate(|l| {
 			l.set_resource(service_name.to_string(), uri.to_string());
 		});
-		if !self.relay.policies.validate(
+		if !self.relay.target_policies(service_name).validate(
 			&rbac::ResourceType::Resource(rbac::ResourceId::new(
 				service_name.to_string(),
 				uri.to_string(),
@@ -426,7 +426,7 @@ impl Session {
 							l.set_tool(service_name.to_string(), tool.to_string());
 							l.capture_call_arguments(call_arguments);
 						});
-						if !self.relay.policies.validate(
+						if !self.relay.target_policies(service_name).validate(
 							&rbac::ResourceType::Tool(rbac::ResourceId::new(
 								service_name.to_string(),
 								tool.to_string(),

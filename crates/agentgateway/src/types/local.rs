@@ -969,6 +969,7 @@ impl LocalBackend {
 						})
 					};
 
+					let mut stdio_inline_policies = Vec::new();
 					let spec = match t.spec.clone() {
 						LocalMcpTargetSpec::Sse { backend } => {
 							let (bref, path) = process_backend(backend)?;
@@ -989,11 +990,30 @@ impl LocalBackend {
 							args,
 							env,
 							clear_env,
-						} => McpTargetSpec::Stdio {
-							cmd,
-							args,
-							env,
-							clear_env,
+						} => {
+							// Stdio targets have no backend, so translate per-target
+							// policies into inline_policies on the McpTarget directly.
+							if let Some(policies) = t.policies.clone() {
+								let translated = LocalBackendPolicies {
+									simple: policies.simple,
+									mcp_authorization: policies.mcp_authorization,
+									a2a: None,
+									inference_routing: None,
+									ai: None,
+									response_header_modifier: None,
+									request_redirect: None,
+									health: None,
+									ext_authz: None,
+								}
+								.translate()?;
+								stdio_inline_policies = translated;
+							}
+							McpTargetSpec::Stdio {
+								cmd,
+								args,
+								env,
+								clear_env,
+							}
 						},
 						LocalMcpTargetSpec::OpenAPI { backend, schema } => {
 							let (bref, _) = process_backend(backend)?;
@@ -1008,6 +1028,7 @@ impl LocalBackend {
 					let t = McpTarget {
 						name: t.name.clone(),
 						spec,
+						inline_policies: stdio_inline_policies,
 					};
 					targets.push(Arc::new(t));
 				}

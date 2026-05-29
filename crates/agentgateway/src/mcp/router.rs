@@ -77,7 +77,18 @@ impl App {
 						.backend()
 						.map(|b| crate::proxy::resolve_simple_backend_with_policies(b, &pi))
 						.transpose()?;
-					let inline_pols = be.as_ref().map(|pol| pol.inline_policies.as_slice());
+					let inline_pols = be
+						.as_ref()
+						.map(|pol| pol.inline_policies.as_slice())
+						.or_else(|| {
+							// Stdio (and other backend-less) targets carry inline
+							// policies directly on the McpTarget.
+							if t.inline_policies.is_empty() {
+								None
+							} else {
+								Some(t.inline_policies.as_slice())
+							}
+						});
 					let sub_backend_target = BackendTargetRef::Backend {
 						name: backend_group_name.name.as_ref(),
 						namespace: backend_group_name.namespace.as_ref(),

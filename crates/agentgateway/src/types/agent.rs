@@ -1411,6 +1411,11 @@ pub struct McpTarget {
 	pub name: McpTargetName,
 	#[serde(flatten)]
 	pub spec: McpTargetSpec,
+	/// Inline policies for targets that don't have a backend (e.g. stdio).
+	/// For HTTP-based targets, policies are carried on the BackendWithPolicies instead.
+	#[serde(skip)]
+	#[cfg_attr(feature = "schema", schemars(skip))]
+	pub inline_policies: Vec<BackendTrafficPolicy>,
 }
 
 pub type McpTargetName = Strng;

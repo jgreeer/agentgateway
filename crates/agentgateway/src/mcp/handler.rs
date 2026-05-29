@@ -57,6 +57,10 @@ fn resource_uri(default_target_name: Option<&String>, target: &str, uri: &str) -
 pub struct Relay {
 	upstreams: Arc<upstream::UpstreamGroup>,
 	pub policies: McpAuthorizationSet,
+	/// Per-target authorization policies. When a target has its own
+	/// `mcpAuthorization`, it overrides the relay-wide `policies` for
+	/// that target's tools/prompts/resources.
+	per_target_policies: Arc<HashMap<String, McpAuthorizationSet>>,
 }
 
 pub struct RelayInputs {
@@ -77,16 +81,35 @@ impl Relay {
 		policies: McpAuthorizationSet,
 		client: PolicyClient,
 	) -> Result<Self, mcp::Error> {
+		// Extract per-target authorization policies from the backend group.
+		let mut per_target = HashMap::new();
+		for t in &backend.targets {
+			if let Some(authz) = &t.backend_policies.mcp_authorization {
+				per_target.insert(t.name.to_string(), authz.clone());
+			}
+		}
 		Ok(Self {
 			upstreams: Arc::new(upstream::UpstreamGroup::new(client, backend)?),
 			policies,
+			per_target_policies: Arc::new(per_target),
 		})
 	}
 	pub fn with_policies(&self, policies: McpAuthorizationSet) -> Self {
 		Self {
 			upstreams: self.upstreams.clone(),
 			policies,
+			per_target_policies: self.per_target_policies.clone(),
 		}
+	}
+
+	/// Returns the effective authorization policy for a target.
+	/// Per-target policy overrides the relay-wide policy.
+	pub(crate) fn target_policies(&self, target_name: &str) -> McpAuthorizationSet {
+		self
+			.per_target_policies
+			.get(target_name)
+			.cloned()
+			.unwrap_or_else(|| self.policies.clone())
 	}
 
 	pub fn parse_resource_name<'a, 'b: 'a>(
@@ -187,6 +210,7 @@ impl Relay {
 
 	pub fn merge_tools(&self, cel: CelExecWrapper) -> Box<MergeFn> {
 		let policies = self.policies.clone();
+		let per_target_policies = self.per_target_policies.clone();
 		let default_target_name = self.upstreams.default_target_name.clone();
 		Box::new(move |streams| {
 			let tools = streams
@@ -196,11 +220,14 @@ impl Relay {
 						ServerResult::ListToolsResult(ltr) => ltr.tools,
 						_ => vec![],
 					};
+					let effective_policies = per_target_policies
+						.get(server_name.as_str())
+						.unwrap_or(&policies);
 					tools
 						.into_iter()
 						// Apply authorization policies, filtering tools that are not allowed.
 						.filter(|t| {
-							policies.validate(
+							effective_policies.validate(
 								&rbac::ResourceType::Tool(rbac::ResourceId::new(
 									server_name.to_string(),
 									t.name.to_string(),
@@ -271,6 +298,7 @@ impl Relay {
 
 	pub fn merge_prompts(&self, cel: CelExecWrapper) -> Box<MergeFn> {
 		let policies = self.policies.clone();
+		let per_target_policies = self.per_target_policies.clone();
 		let default_target_name = self.upstreams.default_target_name.clone();
 		Box::new(move |streams| {
 			let prompts = streams
@@ -280,10 +308,13 @@ impl Relay {
 						ServerResult::ListPromptsResult(lpr) => lpr.prompts,
 						_ => vec![],
 					};
+					let effective_policies = per_target_policies
+						.get(server_name.as_str())
+						.unwrap_or(&policies);
 					prompts
 						.into_iter()
 						.filter(|p| {
-							policies.validate(
+							effective_policies.validate(
 								&rbac::ResourceType::Prompt(rbac::ResourceId::new(
 									server_name.to_string(),
 									p.name.to_string(),
@@ -310,6 +341,7 @@ impl Relay {
 	}
 	pub fn merge_resources(&self, cel: CelExecWrapper) -> Box<MergeFn> {
 		let policies = self.policies.clone();
+		let per_target_policies = self.per_target_policies.clone();
 		let default_target_name = self.upstreams.default_target_name.clone();
 		Box::new(move |streams| {
 			let resources = streams
@@ -319,10 +351,13 @@ impl Relay {
 						ServerResult::ListResourcesResult(lrr) => lrr.resources,
 						_ => vec![],
 					};
+					let effective_policies = per_target_policies
+						.get(server_name.as_str())
+						.unwrap_or(&policies);
 					resources
 						.into_iter()
 						.filter(|r| {
-							policies.validate(
+							effective_policies.validate(
 								&rbac::ResourceType::Resource(rbac::ResourceId::new(
 									server_name.to_string(),
 									r.uri.to_string(),
@@ -350,6 +385,7 @@ impl Relay {
 	}
 	pub fn merge_resource_templates(&self, cel: CelExecWrapper) -> Box<MergeFn> {
 		let policies = self.policies.clone();
+		let per_target_policies = self.per_target_policies.clone();
 		let default_target_name = self.upstreams.default_target_name.clone();
 		Box::new(move |streams| {
 			let resource_templates = streams
@@ -359,10 +395,13 @@ impl Relay {
 						ServerResult::ListResourceTemplatesResult(lrr) => lrr.resource_templates,
 						_ => vec![],
 					};
+					let effective_policies = per_target_policies
+						.get(server_name.as_str())
+						.unwrap_or(&policies);
 					resource_templates
 						.into_iter()
 						.filter(|rt| {
-							policies.validate(
+							effective_policies.validate(
 								&rbac::ResourceType::Resource(rbac::ResourceId::new(
 									server_name.to_string(),
 									rt.uri_template.to_string(),
