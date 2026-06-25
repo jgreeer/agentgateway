@@ -1419,6 +1419,7 @@ type AwsAssumeRole struct {
 	RoleArn string `json:"roleArn"`
 }
 
+// +kubebuilder:validation:ExactlyOneOf=secretRef;managedIdentity;workloadIdentity
 type AzureAuth struct {
 	// Credential source, defaulting to a Kubernetes
 	// `Secret`, containing the Azure credentials. When using the default Secret
@@ -1432,6 +1433,16 @@ type AzureAuth struct {
 	//
 	// +optional
 	ManagedIdentity *AzureManagedIdentity `json:"managedIdentity,omitempty"`
+
+	// Workload identity authentication settings. Uses the federated token
+	// projected into the data plane pod (via the `AZURE_FEDERATED_TOKEN_FILE`,
+	// `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_AUTHORITY_HOST`
+	// environment variables) to authenticate. This is the recommended method
+	// when running on Azure Kubernetes Service (AKS) with Workload Identity
+	// enabled.
+	//
+	// +optional
+	WorkloadIdentity *AzureWorkloadIdentity `json:"workloadIdentity,omitempty"`
 }
 
 type AzureManagedIdentity struct {
@@ -1441,6 +1452,9 @@ type AzureManagedIdentity struct {
 	ObjectID string `json:"objectId"`
 	// +required
 	ResourceID string `json:"resourceId"`
+}
+
+type AzureWorkloadIdentity struct {
 }
 
 type BackendAuthPassthrough struct {

@@ -65,6 +65,23 @@ func TestAzureAuthResolvesConfiguredCredentialRef(t *testing.T) {
 	}
 }
 
+func TestAzureWorkloadIdentityBuildsExplicitConfig(t *testing.T) {
+	secrets := krt.NewStaticCollection[*corev1.Secret](nil, nil, krt.WithName("plugins/TestAzureWorkloadIdentityBuildsExplicitConfig"))
+	ctx := simpleAuthPolicyCtx(&AgwCollections{
+		Secrets: secrets,
+	}, kubeutils.NewSecretCredentialResolver(secrets))
+
+	policy, err := buildAzureAuthPolicy(ctx, &agentgateway.AzureAuth{
+		WorkloadIdentity: &agentgateway.AzureWorkloadIdentity{},
+	}, "default")
+	assert.NoError(t, err)
+	assert.Equal(t, policy != nil, true)
+
+	explicit := policy.GetAzure().GetExplicitConfig()
+	assert.Equal(t, explicit != nil, true)
+	assert.Equal(t, explicit.GetWorkloadIdentityCredential() != nil, true)
+}
+
 func TestBasicAuthCanUseInjectedCredentialResolver(t *testing.T) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
