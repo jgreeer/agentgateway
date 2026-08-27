@@ -6,8 +6,8 @@
 //! [`CRYPTO_BACKEND`]).
 //!
 //! Some operations cannot yet be routed through a pluggable backend (for
-//! example certificate generation via `rcgen`, or legacy password hashing).
-//! Such documented exceptions must be guarded with the appropriate
+//! example JWT signing via `jsonwebtoken`, or legacy password hashing). Such
+//! documented exceptions must be guarded with the appropriate
 //! `#[cfg(feature = ...)]` so the backend in use stays explicit.
 
 // Exactly one crypto backend must be selected at compile time.
@@ -22,6 +22,7 @@ compile_error!(
 );
 
 pub mod aead;
+pub mod cert;
 pub mod digest;
 pub mod jwt;
 pub mod rand;

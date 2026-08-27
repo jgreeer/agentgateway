@@ -588,7 +588,7 @@ mod csr {
 	impl CsrOptions {
 		pub fn generate(&self) -> anyhow::Result<CertSign> {
 			use rcgen::{CertificateParams, DistinguishedName, SanType};
-			let kp = rcgen::KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256)?;
+			let kp = crate::crypto::cert::generate_key()?;
 			let private_key = kp.serialize_pem();
 			let mut params = CertificateParams::default();
 			params.subject_alt_names = vec![SanType::URI(self.san.clone().try_into()?)];

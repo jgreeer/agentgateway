@@ -310,6 +310,7 @@ dependencies = [
  "quick_cache",
  "rand 0.10.2",
  "rcgen 0.14.9",
+ "rcgen-symcrypt",
  "regex",
  "reqwest 0.12.28",
  "reqwest 0.13.4",
@@ -5846,8 +5847,6 @@ dependencies = [
 [[package]]
 name = "rcgen"
 version = "0.14.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "091e7a8e7d86e6feb87a27ce8e2cba29d49eff9507afeebefab7eeb2ca667fb4"
 dependencies = [
  "aws-lc-rs",
  "pem",
@@ -5855,6 +5854,16 @@ dependencies = [
  "time",
  "x509-parser",
  "yasna 0.6.0",
+]
+
+[[package]]
+name = "rcgen-symcrypt"
+version = "0.1.0"
+dependencies = [
+ "pem",
+ "rcgen 0.14.9",
+ "rustls-pki-types",
+ "symcrypt",
 ]
 
 [[package]]

@@ -9,18 +9,19 @@ use std::time::{Duration, Instant};
 
 use anyhow::anyhow;
 use quick_cache::sync::Cache;
-use rcgen::{CertificateParams, DnType, Issuer, KeyPair};
+use rcgen::{CertificateParams, DnType, Issuer};
 use rustls::pki_types::pem::PemObject;
 use rustls::pki_types::{CertificateDer, PrivatePkcs8KeyDer};
 use rustls::server::ResolvesServerCert;
 use rustls::sign::CertifiedKey;
 
+use crate::crypto::cert;
 use crate::transport::tls;
 use crate::types::agent::{ServerTLSConfig, TLSVersion};
 
 struct DynamicCa {
 	cert_der: Vec<u8>,
-	issuer: Issuer<'static, KeyPair>,
+	issuer: Issuer<'static, cert::GatewayKeyPair>,
 }
 
 impl DynamicCa {
@@ -34,7 +35,7 @@ impl DynamicCa {
 			.map_err(|e| anyhow!("failed to parse dynamic CA cert PEM: {e}"))?
 			.to_vec();
 
-		let key_pair = KeyPair::from_pem(key_pem_str)?;
+		let key_pair = cert::key_from_pem(key_pem_str)?;
 		let issuer = Issuer::from_ca_cert_pem(cert_pem_str, key_pair)?;
 
 		Ok(Self { cert_der, issuer })
@@ -48,8 +49,8 @@ impl DynamicCa {
 		params.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ServerAuth];
 		params.use_authority_key_identifier_extension = true;
 
-		let leaf_key = KeyPair::generate()?;
-		let leaf_cert = params.signed_by(&leaf_key, &self.issuer)?;
+		let leaf_key = cert::generate_key()?;
+		let leaf_cert = params.signed_by_with_provider(&leaf_key, &self.issuer, cert::provider())?;
 
 		Ok((leaf_cert.der().to_vec(), leaf_key.serialize_der()))
 	}
