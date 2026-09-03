@@ -76,6 +76,44 @@ jobs:
       if: ${{ always() && startsWith(matrix.os, 'blacksmith-') }}
       run: tools/manage-validation-deps.sh stop
 
+  proxy-test-symcrypt:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    name: Proxy Test (SymCrypt)
+    env:
+      CARGO_PROFILE_TEST_DEBUG: 0
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - name: Set up Rust build cache
+      uses: ./.github/actions/rust-build-cache
+      with:
+        rust-version: "${{ env.RUST_VERSION }}"
+        cache-key: proxy-test-symcrypt
+        save: ${{ github.ref == 'refs/heads/main' }}
+    - name: Install SymCrypt
+      run: |
+        curl -sSLO https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
+        sudo apt-get update
+        sudo apt-get install -y symcrypt
+    - name: Lint rcgen provider
+      run: cargo clippy --manifest-path vendor/rcgen-symcrypt/Cargo.toml --locked --all-targets -- -D warnings
+    - name: Lint agentgateway
+      run: cargo clippy -p agentgateway --no-default-features --features crypto-symcrypt --all-targets -- -D warnings
+    - name: Check rcgen provider isolation
+      run: |
+        if cargo tree --manifest-path vendor/rcgen-symcrypt/Cargo.toml --locked --edges normal,build | grep -E '(^| )ring v|aws-lc'; then
+          exit 1
+        fi
+    - name: Test rcgen provider
+      run: cargo test --manifest-path vendor/rcgen-symcrypt/Cargo.toml --locked
+    - name: Test agentgateway
+      run: cargo test -p agentgateway --no-default-features --features crypto-symcrypt --lib --test integration -- --test-threads=1
+    - name: Check application
+      run: cargo check -p agentgateway-app --no-default-features --features crypto-symcrypt
+
   proxy-lint:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:

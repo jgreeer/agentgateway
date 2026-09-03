@@ -21,16 +21,17 @@ impl IstioCertificateService for MockCaService {
 		&self,
 		req: Request<IstioCertificateRequest>,
 	) -> Result<Response<IstioCertificateResponse>, Status> {
+		let provider = agentgateway::crypto::rcgen::provider();
 		// Parse the CSR from the request
 		let csr_pem = req.into_inner().csr;
-		let csr = CertificateSigningRequestParams::from_pem(&csr_pem)
+		let csr = CertificateSigningRequestParams::from_pem(&csr_pem, provider)
 			.map_err(|e| Status::internal(format!("Failed to parse CSR: {}", e)))?;
 
 		// Sign with CA issuer
 		let issuer = Issuer::from_ca_cert_pem(self.ca_cert_pem.as_str(), &*self.ca_key)
 			.map_err(|e| Status::internal(format!("Failed to load CA issuer: {}", e)))?;
 		let cert = csr
-			.signed_by(&issuer)
+			.signed_by(&issuer, provider)
 			.map_err(|e| Status::internal(format!("Failed to sign certificate: {}", e)))?;
 
 		let cert_pem = cert.pem();

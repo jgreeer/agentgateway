@@ -34,7 +34,8 @@ impl DynamicCa {
 			.map_err(|e| anyhow!("failed to parse dynamic CA cert PEM: {e}"))?
 			.to_vec();
 
-		let key_pair = KeyPair::from_pem(key_pem_str)?;
+		let provider = crate::crypto::rcgen::provider();
+		let key_pair = KeyPair::from_pem(key_pem_str, provider)?;
 		let issuer = Issuer::from_ca_cert_pem(cert_pem_str, key_pair)?;
 
 		Ok(Self { cert_der, issuer })
@@ -48,8 +49,9 @@ impl DynamicCa {
 		params.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ServerAuth];
 		params.use_authority_key_identifier_extension = true;
 
-		let leaf_key = KeyPair::generate()?;
-		let leaf_cert = params.signed_by(&leaf_key, &self.issuer)?;
+		let provider = crate::crypto::rcgen::provider();
+		let leaf_key = KeyPair::generate(provider)?;
+		let leaf_cert = params.signed_by(&leaf_key, &self.issuer, provider)?;
 
 		Ok((leaf_cert.der().to_vec(), leaf_key.serialize_der()))
 	}
@@ -250,10 +252,13 @@ mod tests {
 	}
 
 	fn test_resolver() -> DynamicCaCertResolver {
-		let ca_key = rcgen::KeyPair::generate().expect("generate CA key");
+		let provider = crate::crypto::rcgen::provider();
+		let ca_key = rcgen::KeyPair::generate(provider).expect("generate CA key");
 		let mut ca_params = rcgen::CertificateParams::default();
 		ca_params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
-		let ca_cert = ca_params.self_signed(&ca_key).expect("generate CA cert");
+		let ca_cert = ca_params
+			.self_signed(&ca_key, provider)
+			.expect("generate CA cert");
 
 		DynamicCaCertResolver {
 			ca: Arc::new(
@@ -299,9 +304,10 @@ mod tests {
 
 	#[test]
 	fn leaf_authority_key_identifier_matches_self_signed_ca() {
-		let ca_key = KeyPair::generate().expect("generate CA key");
+		let provider = crate::crypto::rcgen::provider();
+		let ca_key = KeyPair::generate(provider).expect("generate CA key");
 		let ca_cert = ca_params("dynamic CA")
-			.self_signed(&ca_key)
+			.self_signed(&ca_key, provider)
 			.expect("generate CA cert");
 		let dynamic_ca =
 			DynamicCa::from_pem(ca_cert.pem().as_bytes(), ca_key.serialize_pem().as_bytes())
@@ -319,18 +325,19 @@ mod tests {
 
 	#[test]
 	fn intermediate_ca_signs_leaf_and_is_served_in_chain() {
-		let root_key = KeyPair::generate().expect("generate root key");
+		let provider = crate::crypto::rcgen::provider();
+		let root_key = KeyPair::generate(provider).expect("generate root key");
 		let root_params = ca_params("root CA");
 		let root_cert = root_params
-			.self_signed(&root_key)
+			.self_signed(&root_key, provider)
 			.expect("generate root cert");
 		let root_issuer = Issuer::new(root_params, root_key);
 
-		let intermediate_key = KeyPair::generate().expect("generate intermediate key");
+		let intermediate_key = KeyPair::generate(provider).expect("generate intermediate key");
 		let mut intermediate_params = ca_params("dynamic intermediate CA");
 		intermediate_params.use_authority_key_identifier_extension = true;
 		let intermediate_cert = intermediate_params
-			.signed_by(&intermediate_key, &root_issuer)
+			.signed_by(&intermediate_key, &root_issuer, provider)
 			.expect("generate intermediate cert");
 		let intermediate_der = intermediate_cert.der().to_vec();
 		let dynamic_ca = DynamicCa::from_pem(

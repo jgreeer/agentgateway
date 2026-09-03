@@ -21,7 +21,6 @@ use serde_json::Value;
 use tokio::io::DuplexStream;
 use tokio_rustls::TlsConnector;
 use tracing::{info, trace};
-#[cfg(feature = "crypto-aws-lc")]
 use wiremock::tls_certs::MockTlsCertificates;
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -33,7 +32,6 @@ use crate::proxy::Gateway;
 use crate::proxy::request_builder::RequestBuilder;
 use crate::store::Stores;
 use crate::transport::stream::{Socket, TCPConnectionInfo};
-#[cfg(feature = "crypto-aws-lc")]
 use crate::transport::tls;
 use crate::types::agent::{
 	Backend, BackendReference, BackendTarget, BackendTrafficPolicy, BackendWithPolicies, Bind,
@@ -392,11 +390,7 @@ pub async fn simple_mock() -> MockServer {
 	mock
 }
 
-// Spawn a mock TLS server. It will always respond on h2,http/1.1 ALPN
-// Note: wiremock generates test certs via rcgen (which uses aws_lc_rs internally).
-// The OpenSSL KeyProvider cannot parse the DER keys that aws_lc_rs produces,
-// so this function is only available with the crypto-aws-lc feature.
-#[cfg(feature = "crypto-aws-lc")]
+// Spawn a mock TLS server. It will always respond on h2,http/1.1 ALPN.
 pub async fn tls_mock() -> (MockServer, MockTlsCertificates) {
 	let _ = rustls::crypto::CryptoProvider::install_default(Arc::unwrap_or_clone(tls::provider()));
 	let certs = wiremock::tls_certs::MockTlsCertificates::random();

@@ -778,8 +778,9 @@ pub mod trustdomain {
 
 		/// Generate a leaf cert with a SPIFFE URI SAN for the given trust domain, signed by a test CA.
 		fn make_spiffe_cert(trust_domain: &str) -> CertificateDer<'static> {
-			let kp = KeyPair::generate().unwrap();
-			let ca_kp = KeyPair::generate().unwrap();
+			let provider = crate::crypto::rcgen::provider();
+			let kp = KeyPair::generate(provider).unwrap();
+			let ca_kp = KeyPair::generate(provider).unwrap();
 
 			let mut params = CertificateParams::default();
 			params.not_before = SystemTime::now().into();
@@ -797,17 +798,18 @@ pub mod trustdomain {
 			ca_params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
 			ca_params.not_before = SystemTime::now().into();
 			ca_params.not_after = (SystemTime::now() + Duration::from_secs(3600)).into();
-			let _ca_cert = ca_params.self_signed(&ca_kp).unwrap();
+			let _ca_cert = ca_params.self_signed(&ca_kp, provider).unwrap();
 			let issuer = Issuer::from_params(&ca_params, &ca_kp);
 
-			let cert = params.signed_by(&kp, &issuer).unwrap();
+			let cert = params.signed_by(&kp, &issuer, provider).unwrap();
 			CertificateDer::from(cert.der().to_vec())
 		}
 
 		/// Generate a leaf cert with an arbitrary URI SAN, signed by a test CA.
 		fn make_cert_with_uri(uri: &str) -> CertificateDer<'static> {
-			let kp = KeyPair::generate().unwrap();
-			let ca_kp = KeyPair::generate().unwrap();
+			let provider = crate::crypto::rcgen::provider();
+			let kp = KeyPair::generate(provider).unwrap();
+			let ca_kp = KeyPair::generate(provider).unwrap();
 
 			let mut params = CertificateParams::default();
 			params.not_before = SystemTime::now().into();
@@ -823,7 +825,7 @@ pub mod trustdomain {
 			ca_params.not_after = (SystemTime::now() + Duration::from_secs(3600)).into();
 			let issuer = Issuer::from_params(&ca_params, &ca_kp);
 
-			let cert = params.signed_by(&kp, &issuer).unwrap();
+			let cert = params.signed_by(&kp, &issuer, provider).unwrap();
 			CertificateDer::from(cert.der().to_vec())
 		}
 

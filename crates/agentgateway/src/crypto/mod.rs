@@ -5,10 +5,9 @@
 //! active backend is selected at compile time via `crypto-*` features (see
 //! [`CRYPTO_BACKEND`]).
 //!
-//! Some operations cannot yet be routed through a pluggable backend (for
-//! example certificate generation via `rcgen`, or legacy password hashing).
-//! Such documented exceptions must be guarded with the appropriate
-//! `#[cfg(feature = ...)]` so the backend in use stays explicit.
+//! Operations without a pluggable backend, such as legacy password hashing,
+//! must be documented and guarded with the appropriate `#[cfg(feature = ...)]`
+//! so the backend in use stays explicit.
 
 // Exactly one crypto backend must be selected at compile time.
 #[cfg(not(any(feature = "crypto-aws-lc", feature = "crypto-symcrypt")))]
@@ -25,14 +24,14 @@ pub mod aead;
 pub mod digest;
 pub mod jwt;
 pub mod rand;
+pub mod rcgen;
 pub mod tls;
 
 pub use tls::{provider, provider_with_cipher_suites, provider_with_options};
 
 /// Initializes process-global crypto state for the compiled-in backend.
 ///
-/// Call once at startup, before any cryptographic operation that depends on an
-/// installed provider (currently JWT signing/verification via [`jwt`]).
+/// Call once at startup before JWT operations that depend on an installed provider.
 pub fn init() {
 	jwt::init();
 }

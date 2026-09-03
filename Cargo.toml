@@ -6,6 +6,7 @@ async-openai = { git = "https://github.com/howardjohn/async-openai", rev = "681e
 
 [workspace]
 resolver = "2"
+exclude = ["vendor/rcgen-symcrypt"]
 members = [
     "crates/agentgateway",
     "crates/agentgateway-app",
@@ -172,7 +173,10 @@ prost-wkt-build = "0.7"
 pwhash = "1"
 rand = "0.10"
 quick_cache = "0.7.0"
-rcgen = { version = "0.14", default-features = false, features = ["pem", "x509-parser", "aws_lc_rs"] }
+rcgen = { git = "https://github.com/jgreeer/rcgen.git", rev = "19aece99fc60c11f93ea16207d124169fdff39cf", default-features = false, features = ["crypto", "pem", "x509-parser"] }
+# Based on jgreeer/rcgen-symcrypt at 5dfad83f67fcc391039786837ba2407f3e7fc2a7,
+# adapted to rcgen's explicit-provider API.
+rcgen-symcrypt = { path = "vendor/rcgen-symcrypt" }
 regex = "1.12"
 reqwest = { version = "0.13", default-features = false, features = [
     "http2",

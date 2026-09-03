@@ -3327,10 +3327,13 @@ mod tests {
 
 	#[tokio::test]
 	async fn dynamic_ca_tls_config_applies_frontend_tls_profile() {
-		let ca_key = rcgen::KeyPair::generate().expect("generate CA key");
+		let provider = crate::crypto::rcgen::provider();
+		let ca_key = rcgen::KeyPair::generate(provider).expect("generate CA key");
 		let mut ca_params = rcgen::CertificateParams::default();
 		ca_params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
-		let ca_cert = ca_params.self_signed(&ca_key).expect("generate CA cert");
+		let ca_cert = ca_params
+			.self_signed(&ca_key, provider)
+			.expect("generate CA cert");
 
 		let tls_config = ServerTLSConfig::dynamic_ca_with_profile(
 			ca_cert.pem().into_bytes(),

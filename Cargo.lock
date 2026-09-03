@@ -295,7 +295,7 @@ dependencies = [
  "opentelemetry-proto",
  "opentelemetry_sdk",
  "parking_lot",
- "pem",
+ "pem 3.0.6",
  "percent-encoding",
  "phonenumber",
  "pin-project-lite",
@@ -309,7 +309,8 @@ dependencies = [
  "protos",
  "quick_cache",
  "rand 0.10.2",
- "rcgen 0.14.9",
+ "rcgen 0.14.10",
+ "rcgen-symcrypt",
  "regex",
  "reqwest 0.12.28",
  "reqwest 0.13.4",
@@ -2323,6 +2324,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb"
 dependencies = [
  "const-oid 0.9.6",
+ "der_derive",
  "pem-rfc7468",
  "zeroize",
 ]
@@ -2349,6 +2351,17 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "rusticata-macros",
+]
+
+[[package]]
+name = "der_derive"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8034092389675178f570469e6c3b0465d3d30b4505c294a6550db47f3c17ad18"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -4023,7 +4036,7 @@ dependencies = [
  "base64 0.22.1",
  "getrandom 0.2.17",
  "js-sys",
- "pem",
+ "pem 3.0.6",
  "serde",
  "serde_json",
  "signature",
@@ -4914,6 +4927,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d30c53c26bc5b31a98cd02d20f25a7c8567146caf63ed593a9d87b2775291be"
 dependencies = [
  "base64 0.22.1",
+ "serde_core",
+]
+
+[[package]]
+name = "pem"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d354a98a3d1251555de99e8fdd8afda05573c31b82f59063a7b0a29b5527f120"
+dependencies = [
+ "base64 0.23.1",
  "serde_core",
 ]
 
@@ -5836,7 +5859,7 @@ version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75e669e5202259b5314d1ea5397316ad400819437857b90861765f24c4cf80a2"
 dependencies = [
- "pem",
+ "pem 3.0.6",
  "ring",
  "rustls-pki-types",
  "time",
@@ -5845,16 +5868,28 @@ dependencies = [
 
 [[package]]
 name = "rcgen"
-version = "0.14.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "091e7a8e7d86e6feb87a27ce8e2cba29d49eff9507afeebefab7eeb2ca667fb4"
+version = "0.14.10"
+source = "git+https://github.com/jgreeer/rcgen.git?rev=19aece99fc60c11f93ea16207d124169fdff39cf#19aece99fc60c11f93ea16207d124169fdff39cf"
 dependencies = [
  "aws-lc-rs",
- "pem",
+ "pem 4.0.0",
  "rustls-pki-types",
  "time",
  "x509-parser",
  "yasna 0.6.0",
+]
+
+[[package]]
+name = "rcgen-symcrypt"
+version = "0.1.0"
+dependencies = [
+ "der 0.7.10",
+ "pkcs1",
+ "pkcs8",
+ "rcgen 0.14.10",
+ "rustls-pki-types",
+ "sec1 0.7.3",
+ "symcrypt",
 ]
 
 [[package]]

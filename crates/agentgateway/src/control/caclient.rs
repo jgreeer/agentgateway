@@ -588,7 +588,8 @@ mod csr {
 	impl CsrOptions {
 		pub fn generate(&self) -> anyhow::Result<CertSign> {
 			use rcgen::{CertificateParams, DistinguishedName, SanType};
-			let kp = rcgen::KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256)?;
+			let provider = crate::crypto::rcgen::provider();
+			let kp = rcgen::KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256, provider)?;
 			let private_key = kp.serialize_pem();
 			let mut params = CertificateParams::default();
 			params.subject_alt_names = vec![SanType::URI(self.san.clone().try_into()?)];
@@ -608,6 +609,31 @@ mod csr {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	#[test]
+	fn test_generate_csr_with_selected_provider() {
+		crate::crypto::init();
+		let provider = crate::crypto::rcgen::provider();
+		let generated = csr::CsrOptions {
+			san: "spiffe://cluster.local/ns/default/sa/default".to_string(),
+		}
+		.generate()
+		.expect("generate CSR");
+
+		let key = rcgen::KeyPair::from_pem(
+			std::str::from_utf8(&generated.private_key).expect("private key is UTF-8 PEM"),
+			provider,
+		)
+		.expect("load generated private key");
+		assert_eq!(key.algorithm(), &rcgen::PKCS_ECDSA_P256_SHA256);
+
+		let request = rcgen::CertificateSigningRequestParams::from_pem(&generated.csr, provider)
+			.expect("parse and verify generated CSR");
+		assert_eq!(
+			request.public_key.algorithm(),
+			&rcgen::PKCS_ECDSA_P256_SHA256
+		);
+	}
 
 	#[test]
 	fn test_parse_key_ec_private() {

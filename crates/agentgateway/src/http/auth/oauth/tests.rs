@@ -808,7 +808,8 @@ fn private_key_jwt_sets_x5t_s256_header() {
 
 #[test]
 fn private_key_jwt_signs_with_ps256() {
-	let signing_key = rcgen::KeyPair::generate_for(&rcgen::PKCS_RSA_SHA256).unwrap();
+	let provider = crate::crypto::rcgen::provider();
+	let signing_key = rcgen::KeyPair::generate_for(&rcgen::PKCS_RSA_SHA256, provider).unwrap();
 	let public_key = signing_key.public_key_pem();
 	let private_key = PrivateKeyJwt::try_from(RawPrivateKeyJwt {
 		signing_key: SecretString::from(signing_key.serialize_pem()),

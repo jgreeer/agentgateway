@@ -143,8 +143,7 @@ pub fn run() -> anyhow::Result<()> {
 			pprof_alloc::configure_with_default(Allocator::System)?;
 		}
 	}
-	// Install the process-global crypto providers for the compiled-in backend
-	// (currently the JWT provider) before any cryptographic work.
+	// Install the process-global JWT and rcgen providers before any cryptographic work.
 	agentgateway::crypto::init();
 	let args = Cli::parse();
 	match args.command {

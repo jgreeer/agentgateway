@@ -196,6 +196,7 @@ where
 }
 
 fn generate_test_certs(name: &str) -> rustls::ServerConfig {
+	let provider = agentgateway::crypto::rcgen::provider();
 	// Generate certificates using rcgen with static test keys
 	use std::time::{Duration, SystemTime};
 
@@ -238,16 +239,23 @@ fn generate_test_certs(name: &str) -> rustls::ServerConfig {
 	params.subject_alt_names = vec![SanType::URI(spiffe_id.try_into().unwrap())];
 
 	// Use static test key for consistency
-	let kp = KeyPair::from_pem(std::str::from_utf8(super::shared_ca::TEST_PKEY).unwrap()).unwrap();
+	let kp = KeyPair::from_pem(
+		std::str::from_utf8(super::shared_ca::TEST_PKEY).unwrap(),
+		provider,
+	)
+	.unwrap();
 	let key_pem = kp.serialize_pem();
 
 	// Load CA key
-	let ca_kp =
-		KeyPair::from_pem(std::str::from_utf8(super::shared_ca::TEST_ROOT_KEY).unwrap()).unwrap();
+	let ca_kp = KeyPair::from_pem(
+		std::str::from_utf8(super::shared_ca::TEST_ROOT_KEY).unwrap(),
+		provider,
+	)
+	.unwrap();
 
 	// Sign certificate with CA
 	let issuer = Issuer::from_params(&params, &ca_kp);
-	let server_cert = params.signed_by(&kp, &issuer).unwrap();
+	let server_cert = params.signed_by(&kp, &issuer, provider).unwrap();
 
 	// Convert to DER for rustls
 	let cert_der = CertificateDer::from(server_cert.der().to_vec());

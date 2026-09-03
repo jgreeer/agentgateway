@@ -427,15 +427,16 @@ mod tests {
 	impl TestCa {
 		fn new() -> Self {
 			use rcgen::{BasicConstraints, CertificateParams, IsCa, KeyPair};
+			let provider = crate::crypto::rcgen::provider();
 
 			let now = std::time::SystemTime::now();
 			let not_after = now + Duration::from_secs(3600);
-			let kp = KeyPair::generate().unwrap();
+			let kp = KeyPair::generate(provider).unwrap();
 			let mut params = CertificateParams::default();
 			params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
 			params.not_before = now.into();
 			params.not_after = not_after.into();
-			let cert = params.self_signed(&kp).unwrap();
+			let cert = params.self_signed(&kp, provider).unwrap();
 			Self {
 				cert_der: cert.der().to_vec(),
 				cert_pem: cert.pem(),
@@ -453,7 +454,8 @@ mod tests {
 
 			let now = std::time::SystemTime::now();
 			let not_after = now + Duration::from_secs(3600);
-			let leaf_kp = KeyPair::generate().unwrap();
+			let provider = crate::crypto::rcgen::provider();
+			let leaf_kp = KeyPair::generate(provider).unwrap();
 			let mut params = CertificateParams::default();
 			// SPIFFE SVIDs must carry an explicit basicConstraints (CA:FALSE); the spiffe crate
 			// rejects leaves that omit it (OID 2.5.29.19).
@@ -468,7 +470,7 @@ mod tests {
 			];
 			params.subject_alt_names = vec![SanType::URI(spiffe_id.try_into().unwrap())];
 			let issuer = Issuer::from_params(&self.params, &self.kp);
-			let leaf = params.signed_by(&leaf_kp, &issuer).unwrap();
+			let leaf = params.signed_by(&leaf_kp, &issuer, provider).unwrap();
 			IssuedSvid {
 				leaf_der: leaf.der().to_vec(),
 				key_der: leaf_kp.serialize_der(),

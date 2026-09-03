@@ -26,8 +26,9 @@ pub struct SharedCA {
 
 impl SharedCA {
 	fn new() -> anyhow::Result<Self> {
+		let provider = agentgateway::crypto::rcgen::provider();
 		// Load the pre-generated CA key
-		let ca_key = KeyPair::from_pem(std::str::from_utf8(TEST_ROOT_KEY)?)?;
+		let ca_key = KeyPair::from_pem(std::str::from_utf8(TEST_ROOT_KEY)?, provider)?;
 		let ca_cert_pem = String::from_utf8(TEST_ROOT.to_vec())?;
 
 		Ok(Self {

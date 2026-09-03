@@ -1,0 +1,3 @@
+hard_tabs = false
+match_block_trailing_comma = false
+tab_spaces = 4

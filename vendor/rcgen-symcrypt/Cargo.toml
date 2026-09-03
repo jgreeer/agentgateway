@@ -1,0 +1,25 @@
+[package]
+name = "rcgen-symcrypt"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+license = "MIT OR Apache-2.0"
+description = "SymCrypt-backed CryptoProvider for the rcgen X.509 certificate generator"
+repository = "https://github.com/jgreeer/rcgen-symcrypt"
+keywords = ["rcgen", "symcrypt", "x509", "certificate"]
+categories = ["cryptography"]
+readme = "README.md"
+
+[dependencies]
+der = { version = "0.7.10", features = ["alloc", "derive", "oid"] }
+pkcs1 = { version = "0.7.5", features = ["alloc", "pkcs8"] }
+pkcs8 = { version = "0.10.2", features = ["alloc"] }
+rcgen = { git = "https://github.com/jgreeer/rcgen.git", rev = "19aece99fc60c11f93ea16207d124169fdff39cf", default-features = false, features = ["crypto"] }
+rustls-pki-types = "1"
+sec1 = { version = "0.7.3", default-features = false, features = ["alloc", "der"] }
+symcrypt = "0.5.1"
+
+[dev-dependencies]
+rcgen = { git = "https://github.com/jgreeer/rcgen.git", rev = "19aece99fc60c11f93ea16207d124169fdff39cf", default-features = false, features = ["crypto", "pem", "x509-parser"] }
+
+[workspace]

@@ -53,7 +53,6 @@ async fn tunnel_absolute_form() {
 }
 
 #[tokio::test]
-#[cfg(feature = "crypto-aws-lc")]
 async fn tunnel_connect() {
 	let (mock, _certs) = tls_mock().await;
 	let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -911,7 +910,6 @@ async fn connect_tunnel_obo_exchange_injects_token() {
 /// minting a trusted per-SNI cert, (3) `ConnectHeaders` surviving
 /// `maybe_terminate_tls` into the OBO body, and (4) the decrypted request flowing
 /// into the `dynamic: {}` backend path.
-#[cfg(feature = "crypto-aws-lc")]
 #[tokio::test]
 async fn connect_tunnel_dynamic_ca_obo_dynamic_backend() {
 	use std::collections::HashMap;
@@ -986,10 +984,13 @@ async fn connect_tunnel_dynamic_ca_obo_dynamic_backend() {
 
 	// Generate a self-signed CA; the dynamic-CA inner bind mints a leaf per SNI, and
 	// the inner TLS client trusts it as its root.
-	let ca_key = rcgen::KeyPair::generate().expect("generate CA key");
+	let provider = agentgateway::crypto::rcgen::provider();
+	let ca_key = rcgen::KeyPair::generate(provider).expect("generate CA key");
 	let mut ca_params = rcgen::CertificateParams::default();
 	ca_params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
-	let ca_cert = ca_params.self_signed(&ca_key).expect("generate CA cert");
+	let ca_cert = ca_params
+		.self_signed(&ca_key, provider)
+		.expect("generate CA cert");
 	let ca_cert_pem = ca_cert.pem().into_bytes();
 
 	let tls_config = agentgateway::types::agent::ServerTLSConfig::dynamic_ca_with_profile(
