@@ -2724,8 +2724,13 @@ async fn make_backend_call(
 				.as_ref()
 				.map(|policy| policy.resolve_route(req.uri().path()))
 				.unwrap_or(llm::RouteType::Completions);
-			if matches!(route_type, RouteType::Detect | RouteType::Passthrough)
-				&& let Some(provider_model) = llm.provider.override_model()
+			if matches!(
+				route_type,
+				RouteType::Detect
+					| RouteType::Passthrough
+					| RouteType::AudioTranscription
+					| RouteType::AudioSpeech
+			) && let Some(provider_model) = llm.provider.override_model()
 			{
 				Box::pin(model_router::rewrite_multipart_request_model(
 					&mut req,
@@ -2751,6 +2756,8 @@ async fn make_backend_call(
 				| RouteType::GeminiCountTokens
 				| RouteType::Embeddings
 				| RouteType::Rerank
+				| RouteType::AudioTranscription
+				| RouteType::AudioSpeech
 				| RouteType::Detect => {
 					let request_body_limit = crate::http::buffer_limit(&req);
 					let req = req.map(|b| {
@@ -2834,14 +2841,16 @@ async fn make_backend_call(
 							.await
 							.map_err(ProxyError::AIRequest)?
 						},
-						RouteType::Detect => Box::pin(llm.provider.process_detect_request(
-							&backend_info,
-							llm_request_policies.llm.as_deref(),
-							req,
-							&mut log,
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
+						RouteType::Detect | RouteType::AudioTranscription | RouteType::AudioSpeech => {
+							Box::pin(llm.provider.process_detect_request(
+								&backend_info,
+								llm_request_policies.llm.as_deref(),
+								req,
+								&mut log,
+							))
+							.await
+							.map_err(ProxyError::AIRequest)?
+						},
 						_ => unreachable!(),
 					};
 					let (mut req, llm_request, upstream_route_type) = match r {
@@ -2866,6 +2875,12 @@ async fn make_backend_call(
 								.into(),
 							);
 						},
+					};
+					// Audio reuses Detect's raw passthrough, but keeps its own route type so the provider
+					// builds the correct upstream path (Azure deployment paths differ from OpenAI's).
+					let upstream_route_type = match route_type {
+						RouteType::AudioTranscription | RouteType::AudioSpeech => route_type,
+						_ => upstream_route_type,
 					};
 					dtrace::trace(|trace| {
 						trace.llm_request_detected(

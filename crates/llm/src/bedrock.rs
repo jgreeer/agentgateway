@@ -70,7 +70,12 @@ impl Provider {
 				BedrockEndpoint::Runtime
 			},
 			RT::Models => BedrockEndpoint::Mantle,
-			RT::Detect | RT::Passthrough | RT::GenerateContent => BedrockEndpoint::Runtime,
+			// Bedrock has no audio API; these forward like any other unhandled route.
+			RT::Detect
+			| RT::Passthrough
+			| RT::GenerateContent
+			| RT::AudioTranscription
+			| RT::AudioSpeech => BedrockEndpoint::Runtime,
 			// Chat, and Anthropic count-tokens, follow the model's endpoint: Runtime's Converse /
 			// CountTokens APIs, or Mantle's native OpenAI/Anthropic APIs.
 			RT::Completions | RT::Messages | RT::Responses | RT::AnthropicTokenCount => {
@@ -464,6 +469,8 @@ mod tests {
 			GenerateContent,
 			Detect,
 			Passthrough,
+			AudioTranscription,
+			AudioSpeech,
 		];
 		for rt in all {
 			let expected = match rt {
@@ -471,7 +478,7 @@ mod tests {
 					BedrockEndpoint::Mantle
 				},
 				Embeddings | Realtime | Rerank | GeminiCountTokens | GenerateContent | Detect
-				| Passthrough => BedrockEndpoint::Runtime,
+				| Passthrough | AudioTranscription | AudioSpeech => BedrockEndpoint::Runtime,
 			};
 			assert_eq!(
 				mantle.resolve_endpoint(rt, Some("m"), None),

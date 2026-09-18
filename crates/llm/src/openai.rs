@@ -70,6 +70,8 @@ pub fn path_suffix(route: RouteType) -> &'static str {
 		RouteType::Embeddings => "/embeddings",
 		RouteType::Rerank => "/rerank",
 		RouteType::Realtime => "/realtime",
+		RouteType::AudioTranscription => "/audio/transcriptions",
+		RouteType::AudioSpeech => "/audio/speech",
 		// All others get translated down to completions
 		_ => "/chat/completions",
 	}

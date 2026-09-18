@@ -88,6 +88,8 @@ impl Provider {
 		match route {
 			RouteType::Embeddings => strng::literal!("embeddings"),
 			RouteType::Responses => strng::literal!("responses"),
+			RouteType::AudioTranscription => strng::literal!("audio/transcriptions"),
+			RouteType::AudioSpeech => strng::literal!("audio/speech"),
 			_ => strng::literal!("chat/completions"),
 		}
 	}
@@ -207,6 +209,28 @@ mod tests {
 		"gpt-4o-mini",
 		"/openai/v1/chat/completions"
 	)]
+	// Audio endpoints keep the OpenAI-compatible suffix on the v1 surface.
+	#[case::openai_audio_transcription(
+		AzureResourceType::OpenAI,
+		RouteType::AudioTranscription,
+		None,
+		"whisper",
+		"/openai/v1/audio/transcriptions"
+	)]
+	#[case::openai_audio_speech(
+		AzureResourceType::OpenAI,
+		RouteType::AudioSpeech,
+		None,
+		"tts",
+		"/openai/v1/audio/speech"
+	)]
+	#[case::foundry_audio_speech(
+		AzureResourceType::Foundry,
+		RouteType::AudioSpeech,
+		None,
+		"tts",
+		"/api/projects/my-resource/openai/v1/audio/speech"
+	)]
 	fn test_get_path_for_model(
 		#[case] resource_type: AzureResourceType,
 		#[case] route: RouteType,
@@ -250,6 +274,20 @@ mod tests {
 		"2024-02-15-preview",
 		"text-embedding-3-small",
 		"/openai/deployments/text-embedding-3-small/embeddings?api-version=2024-02-15-preview"
+	)]
+	// Audio on a date-based api-version is deployment-scoped, matching Azure's documented
+	// /openai/deployments/{deployment}/audio/... routes.
+	#[case::audio_speech_date_version(
+		RouteType::AudioSpeech,
+		"2025-04-01-preview",
+		"tts",
+		"/openai/deployments/tts/audio/speech?api-version=2025-04-01-preview"
+	)]
+	#[case::audio_transcription_date_version(
+		RouteType::AudioTranscription,
+		"2025-04-01-preview",
+		"whisper",
+		"/openai/deployments/whisper/audio/transcriptions?api-version=2025-04-01-preview"
 	)]
 	fn test_get_path_for_model_api_versions(
 		#[case] route: RouteType,

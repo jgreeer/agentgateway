@@ -175,6 +175,10 @@ pub enum RouteType {
 	GeminiCountTokens,
 	/// Cohere /v2/rerank (document reranking)
 	Rerank,
+	/// OpenAI /v1/audio/transcriptions (speech-to-text)
+	AudioTranscription,
+	/// OpenAI /v1/audio/speech (text-to-speech)
+	AudioSpeech,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]

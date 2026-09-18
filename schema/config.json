@@ -5886,6 +5886,16 @@
           "description": "Cohere /v2/rerank (document reranking)",
           "type": "string",
           "const": "rerank"
+        },
+        {
+          "description": "OpenAI /v1/audio/transcriptions (speech-to-text)",
+          "type": "string",
+          "const": "audioTranscription"
+        },
+        {
+          "description": "OpenAI /v1/audio/speech (text-to-speech)",
+          "type": "string",
+          "const": "audioSpeech"
         }
       ]
     },

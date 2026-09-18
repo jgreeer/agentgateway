@@ -2164,6 +2164,13 @@ impl AIProvider {
 			req.to_llm_request(self.provider(), tokenize && guardrail_rejection.is_none())?;
 		if original_format == InputFormat::Detect {
 			types::detect::amend_request_info(&mut llm_info, parts.uri.path());
+			// Opaque bodies (multipart audio uploads) carry no readable model, but providers like
+			// Azure need one to build the upstream path.
+			if llm_info.request_model.is_empty()
+				&& let Some(provider_model) = self.override_model()
+			{
+				llm_info.request_model = provider_model;
+			}
 		}
 		llm_info.cache_convention =
 			cache_convention_for(self, provider_format, &llm_info.request_model);

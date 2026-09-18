@@ -570,6 +570,120 @@ llm:
 }
 
 #[tokio::test]
+async fn llm_audio_speech_forwards_to_openai() {
+	let mock = body_mock(b"fake-mp3-bytes").await;
+	let config = format!(
+		r#"
+llm:
+  port: 0
+  models:
+  - name: tts-1
+    provider: openAI
+    params:
+      baseUrl: http://{}/v1
+"#,
+		mock.address()
+	);
+	let t = setup_local_llm_config(&config).await;
+	let io = t.serve_http(strng::literal!("bind/0"));
+	let body = audio_speech_body("tts-1");
+
+	let res = send_audio_speech(io.clone(), body.clone()).await;
+	assert_eq!(res.status(), StatusCode::OK);
+	assert_eq!(read_body_raw(res.into_body()).await, b"fake-mp3-bytes"[..]);
+
+	let request = single_upstream_request(&mock).await;
+	assert_eq!(
+		&request.url[Position::BeforePath..Position::AfterPath],
+		"/v1/audio/speech"
+	);
+	// The synthesis request is forwarded byte-for-byte; there is no OpenAI-shaped translation.
+	assert_eq!(request.body, body);
+}
+
+#[rstest::rstest]
+// Azure's v1 surface keeps the OpenAI-compatible suffix.
+#[case::v1("v1", "/openai/v1/audio/speech")]
+// A date-based api-version is deployment-scoped.
+#[case::dated(
+	"2025-04-01-preview",
+	"/openai/deployments/tts/audio/speech?api-version=2025-04-01-preview"
+)]
+#[tokio::test]
+async fn llm_audio_speech_uses_azure_paths(#[case] api_version: &str, #[case] expected_path: &str) {
+	let mock = body_mock(b"fake-mp3-bytes").await;
+	let config = format!(
+		r#"
+llm:
+  port: 0
+  models:
+  - name: tts
+    provider: azure
+    params:
+      model: tts
+      azureResourceName: my-resource
+      azureResourceType: openAI
+      azureApiVersion: {api_version}
+      baseUrl: http://{}
+"#,
+		mock.address()
+	);
+	let t = setup_local_llm_config(&config).await;
+	let io = t.serve_http(strng::literal!("bind/0"));
+
+	let res = send_audio_speech(io.clone(), audio_speech_body("tts")).await;
+	assert_eq!(res.status(), StatusCode::OK);
+	let _ = read_body_raw(res.into_body()).await;
+
+	let request = single_upstream_request(&mock).await;
+	let (path, query) = expected_path
+		.split_once('?')
+		.map(|(p, q)| (p, Some(q)))
+		.unwrap_or((expected_path, None));
+	assert_eq!(
+		&request.url[Position::BeforePath..Position::AfterPath],
+		path
+	);
+	assert_eq!(request.url.query(), query);
+}
+
+#[tokio::test]
+async fn llm_audio_transcription_uses_azure_deployment_path() {
+	let mock = body_mock(llm_body!("response/completions/basic.json")).await;
+	let config = format!(
+		r#"
+llm:
+  port: 0
+  models:
+  - name: whisper
+    provider: azure
+    params:
+      model: whisper
+      azureResourceName: my-resource
+      azureResourceType: openAI
+      azureApiVersion: 2025-04-01-preview
+      baseUrl: http://{}
+"#,
+		mock.address()
+	);
+	let t = setup_local_llm_config(&config).await;
+	let io = t.serve_http(strng::literal!("bind/0"));
+
+	let res = send_multipart_audio(io.clone(), multipart_audio_body("whisper")).await;
+	assert_eq!(res.status(), StatusCode::OK);
+	let _ = read_body_raw(res.into_body()).await;
+
+	let request = single_upstream_request(&mock).await;
+	assert_eq!(
+		&request.url[Position::BeforePath..Position::AfterPath],
+		"/openai/deployments/whisper/audio/transcriptions"
+	);
+	assert_eq!(request.url.query(), Some("api-version=2025-04-01-preview"));
+	// The audio upload is opaque to the gateway and must reach Azure unchanged.
+	assert_multipart_audio_body(&request.body, "whisper").await;
+}
+
+#[tokio::test]
 async fn llm_model_router_handles_multipart_audio_detect_request() {
 	let mock = body_mock(llm_body!("response/completions/basic.json")).await;
 	let config = format!(
@@ -1235,6 +1349,24 @@ async fn send_multipart_audio(io: MemoryClient, body: Vec<u8>) -> Response {
 		.send(io)
 		.await
 		.expect("multipart audio request")
+}
+
+fn audio_speech_body(model: &str) -> Vec<u8> {
+	serde_json::to_vec(&json!({
+		"model": model,
+		"input": "the quick brown fox jumped over the lazy dogs",
+		"voice": "alloy",
+	}))
+	.expect("speech request fixture should serialize")
+}
+
+async fn send_audio_speech(io: MemoryClient, body: Vec<u8>) -> Response {
+	RequestBuilder::new(Method::POST, "http://lo/v1/audio/speech")
+		.header(header::CONTENT_TYPE, "application/json")
+		.body(Body::from(body))
+		.send(io)
+		.await
+		.expect("audio speech request")
 }
 
 async fn send_completions_with_model(

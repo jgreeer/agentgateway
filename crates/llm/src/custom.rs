@@ -227,7 +227,13 @@ impl ProviderFormat {
 			RouteType::GeminiCountTokens => Self::GeminiCountTokens,
 			RouteType::Realtime => Self::Realtime,
 			RouteType::Rerank => Self::Rerank,
-			RouteType::Models | RouteType::Passthrough | RouteType::Detect => return None,
+			// Audio endpoints are OpenAI-compatible everywhere; only the upstream path differs, so
+			// they are forwarded rather than converted to a provider format.
+			RouteType::Models
+			| RouteType::Passthrough
+			| RouteType::Detect
+			| RouteType::AudioTranscription
+			| RouteType::AudioSpeech => return None,
 		})
 	}
 

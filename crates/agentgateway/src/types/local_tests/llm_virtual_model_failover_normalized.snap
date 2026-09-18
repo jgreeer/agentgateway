@@ -1,5 +1,6 @@
 ---
 source: crates/agentgateway/src/types/local_tests.rs
+assertion_line: 488
 description: "Config normalization test for llm_virtual_model_failover: YAML -> LocalConfig -> NormalizedLocalConfig -> YAML"
 ---
 binds:
@@ -202,6 +203,8 @@ backends:
                 llm:
                   routes:
                     "*": passthrough
+                    /v1/audio/speech: audioSpeech
+                    /v1/audio/transcriptions: audioTranscription
                     /v1/chat/completions: completions
                     /v1/embeddings: embeddings
                     /v1/images/edits: detect
@@ -232,6 +235,8 @@ backends:
                 llm:
                   routes:
                     "*": passthrough
+                    /v1/audio/speech: audioSpeech
+                    /v1/audio/transcriptions: audioTranscription
                     /v1/chat/completions: completions
                     /v1/embeddings: embeddings
                     /v1/images/edits: detect
@@ -257,6 +262,8 @@ backends:
               llmPolicy:
                 routes:
                   "*": passthrough
+                  /v1/audio/speech: audioSpeech
+                  /v1/audio/transcriptions: audioTranscription
                   /v1/chat/completions: completions
                   /v1/embeddings: embeddings
                   /v1/images/edits: detect

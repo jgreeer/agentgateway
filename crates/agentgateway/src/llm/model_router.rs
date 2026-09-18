@@ -88,6 +88,11 @@ pub fn default_route_types() -> Arc<llm::Policy> {
 				(strng::new("/v1/embeddings"), llm::RouteType::Embeddings),
 				(strng::new("/v1/rerank"), llm::RouteType::Rerank),
 				(strng::new("/v2/rerank"), llm::RouteType::Rerank),
+				(
+					strng::new("/v1/audio/transcriptions"),
+					llm::RouteType::AudioTranscription,
+				),
+				(strng::new("/v1/audio/speech"), llm::RouteType::AudioSpeech),
 				(strng::new("*"), llm::RouteType::Passthrough),
 			]
 			.into_iter()
