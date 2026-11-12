@@ -1987,12 +1987,12 @@ spec:
         - azureContentSafety:
             endpoint: my-resource.cognitiveservices.azure.com
             analyzeText: {}
-            policies:
-              auth:
-                azure: {}
-                location:
-                  header:
-                    name: Ocp-Apim-Subscription-Key
+          policies:
+            auth:
+              azure: {}
+              location:
+                header:
+                  name: Ocp-Apim-Subscription-Key
 ---
 _err: should be less than or equal to 6
 apiVersion: agentgateway.dev/v1alpha1
@@ -2012,3 +2012,45 @@ spec:
             endpoint: my-resource.cognitiveservices.azure.com
             analyzeText:
               severityThreshold: 7
+---
+_err: policies is currently only supported for azureContentSafety guards
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: prompt-guard-policies-non-acs-request
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: dummy
+  backend:
+    ai:
+      promptGuard:
+        request:
+        - googleModelArmor:
+            templateId: template
+            projectId: project
+          policies:
+            auth:
+              key: foo
+---
+_err: policies is currently only supported for azureContentSafety guards
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: prompt-guard-policies-non-acs-response
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: dummy
+  backend:
+    ai:
+      promptGuard:
+        response:
+        - regex:
+            matches:
+            - foo
+          policies:
+            auth:
+              key: foo

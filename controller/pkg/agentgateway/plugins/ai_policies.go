@@ -43,7 +43,7 @@ func processRequestGuard(ctx PolicyCtx, namespace string, reqs []agentgateway.Pr
 			}
 		} else if req.AzureContentSafety != nil {
 			pgReq.Kind = &api.BackendPolicySpec_Ai_RequestGuard_AzureContentSafety{
-				AzureContentSafety: processAzureContentSafety(ctx, namespace, req.AzureContentSafety),
+				AzureContentSafety: processAzureContentSafety(ctx, namespace, req.AzureContentSafety, req.Policies),
 			}
 		}
 
@@ -105,7 +105,7 @@ func processResponseGuard(ctx PolicyCtx, namespace string, resps []agentgateway.
 			}
 		} else if resp.AzureContentSafety != nil {
 			pgResp.Kind = &api.BackendPolicySpec_Ai_ResponseGuard_AzureContentSafety{
-				AzureContentSafety: processAzureContentSafety(ctx, namespace, resp.AzureContentSafety),
+				AzureContentSafety: processAzureContentSafety(ctx, namespace, resp.AzureContentSafety, resp.Policies),
 			}
 		}
 
@@ -362,7 +362,7 @@ func processGoogleModelArmor(ctx PolicyCtx, namespace string, armor *agentgatewa
 	return pgArmor
 }
 
-func processAzureContentSafety(ctx PolicyCtx, namespace string, acs *agentgateway.AzureContentSafety) *api.BackendPolicySpec_Ai_AzureContentSafety {
+func processAzureContentSafety(ctx PolicyCtx, namespace string, acs *agentgateway.AzureContentSafety, policies *agentgateway.PromptGuardPolicy) *api.BackendPolicySpec_Ai_AzureContentSafety {
 	if acs == nil {
 		return nil
 	}
@@ -387,8 +387,8 @@ func processAzureContentSafety(ctx PolicyCtx, namespace string, acs *agentgatewa
 		}
 	}
 
-	if acs.Policies != nil {
-		pols, err := translateAuxiliaryBackendPolicies(ctx, namespace, acs.Policies)
+	if policies != nil {
+		pols, err := translateAuxiliaryBackendPolicies(ctx, namespace, policies)
 		if err != nil {
 			logger.Warn("failed to translate policy", "err", err)
 		} else {

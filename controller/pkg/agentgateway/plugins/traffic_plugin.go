@@ -2574,8 +2574,8 @@ func BackendReferencesFromBackendPolicy(s *agentgateway.BackendFull, app func(re
 			if p.BedrockGuardrails != nil {
 				appAuxiliaryTunnel(p.BedrockGuardrails.Policies)
 			}
-			if p.AzureContentSafety != nil {
-				appAuxiliaryTunnel(p.AzureContentSafety.Policies)
+			if p.Policies != nil {
+				appAuxiliaryTunnel(p.Policies)
 			}
 		}
 		for _, p := range s.AI.PromptGuard.Response {
@@ -2588,8 +2588,8 @@ func BackendReferencesFromBackendPolicy(s *agentgateway.BackendFull, app func(re
 			if p.BedrockGuardrails != nil {
 				appAuxiliaryTunnel(p.BedrockGuardrails.Policies)
 			}
-			if p.AzureContentSafety != nil {
-				appAuxiliaryTunnel(p.AzureContentSafety.Policies)
+			if p.Policies != nil {
+				appAuxiliaryTunnel(p.Policies)
 			}
 		}
 	}

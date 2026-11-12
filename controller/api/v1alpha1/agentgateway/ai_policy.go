@@ -330,11 +330,6 @@ type AzureContentSafety struct {
 	// Only supported on request guards.
 	// +optional
 	DetectJailbreak *AzureContentSafetyDetectJailbreak `json:"detectJailbreak,omitempty"`
-
-	// Policies for communicating with Azure AI Content Safety. When `auth` is
-	// unset, implicit Azure authentication is used.
-	// +optional
-	Policies *AzureContentSafetyPolicy `json:"policies,omitempty"`
 }
 
 type AzureContentSafetyAnalyzeText struct {
@@ -368,6 +363,7 @@ type AzureContentSafetyDetectJailbreak struct {
 
 // Prompt guards to apply to requests sent by the client.
 // +kubebuilder:validation:ExactlyOneOf=regex;webhook;openAIModeration;bedrockGuardrails;googleModelArmor;azureContentSafety
+// +kubebuilder:validation:XValidation:rule="!has(self.policies) || has(self.azureContentSafety)",message="policies is currently only supported for azureContentSafety guards"
 // +kubebuilder:validation:XValidation:rule="!has(self.scope) || !has(self.webhook) || (self.scope.size() == 2 && 'SystemPrompt' in self.scope && 'Messages' in self.scope)",message="scope: webhook guards do not support scope; they always inspect SystemPrompt + Messages"
 type PromptguardRequest struct {
 	// Custom response message to return to the client. If not specified, defaults to
@@ -414,10 +410,17 @@ type PromptguardRequest struct {
 	// Azure AI Content Safety settings for prompt guarding.
 	// +optional
 	AzureContentSafety *AzureContentSafety `json:"azureContentSafety,omitempty"`
+
+	// Policies for communicating with the prompt guard provider. Currently
+	// only supported for `azureContentSafety`; when `auth` is unset, implicit
+	// Azure authentication is used.
+	// +optional
+	Policies *PromptGuardPolicy `json:"policies,omitempty"`
 }
 
 // Prompt guards to apply to responses returned by the LLM provider.
 // +kubebuilder:validation:ExactlyOneOf=regex;webhook;bedrockGuardrails;googleModelArmor;azureContentSafety
+// +kubebuilder:validation:XValidation:rule="!has(self.policies) || has(self.azureContentSafety)",message="policies is currently only supported for azureContentSafety guards"
 // +kubebuilder:validation:XValidation:rule="!has(self.azureContentSafety) || !has(self.azureContentSafety.detectJailbreak)",message="azureContentSafety.detectJailbreak is only supported on request guards"
 // +kubebuilder:validation:XValidation:rule="!has(self.scope) || !has(self.webhook) || (self.scope.size() == 1 && 'Messages' in self.scope)",message="scope: webhook guards do not support a non-default scope; they always inspect the default (Messages)"
 type PromptguardResponse struct {
@@ -460,6 +463,12 @@ type PromptguardResponse struct {
 	// `analyzeText` is supported for responses.
 	// +optional
 	AzureContentSafety *AzureContentSafety `json:"azureContentSafety,omitempty"`
+
+	// Policies for communicating with the prompt guard provider. Currently
+	// only supported for `azureContentSafety`; when `auth` is unset, implicit
+	// Azure authentication is used.
+	// +optional
+	Policies *PromptGuardPolicy `json:"policies,omitempty"`
 }
 
 // Prompt guards that block unwanted requests to the LLM provider and mask sensitive data.

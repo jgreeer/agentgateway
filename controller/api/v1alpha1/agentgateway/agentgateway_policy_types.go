@@ -313,18 +313,19 @@ func (p *GoogleModelArmorPolicy) BackendSimple() *BackendSimple {
 	return p.BackendConnectionPolicy.backendSimple(p.Auth.BackendAuth())
 }
 
-// AzureContentSafetyPolicy configures calls to Azure AI Content Safety.
+// PromptGuardPolicy configures calls to a prompt guard provider. It is shared
+// by all guard kinds that support guard-level `policies`.
 // +kubebuilder:validation:AtLeastOneFieldSet
-type AzureContentSafetyPolicy struct {
+type PromptGuardPolicy struct {
 	BackendConnectionPolicy `json:",inline"`
 
-	// Settings for authenticating to Azure AI Content Safety. When omitted,
-	// implicit Azure authentication is used.
+	// Settings for authenticating to the prompt guard provider. For
+	// `azureContentSafety`, implicit Azure authentication is used when omitted.
 	// +optional
-	Auth *AzureContentSafetyAuth `json:"auth,omitempty"`
+	Auth *PromptGuardAuth `json:"auth,omitempty"`
 }
 
-func (p *AzureContentSafetyPolicy) BackendSimple() *BackendSimple {
+func (p *PromptGuardPolicy) BackendSimple() *BackendSimple {
 	if p == nil {
 		return nil
 	}
@@ -1888,34 +1889,34 @@ func (a *GoogleModelArmorAuth) BackendAuth() *BackendAuth {
 	}
 }
 
-// AzureContentSafetyAuth configures credentials for Azure AI Content Safety requests.
+// PromptGuardAuth configures credentials for prompt guard provider requests.
 // +kubebuilder:validation:ExactlyOneOf=key;secretRef;azure
 // +kubebuilder:validation:XValidation:rule="has(self.location) ? has(self.key) || has(self.secretRef) : true",message="location may only be set for key or secretRef auth"
-type AzureContentSafetyAuth struct {
-	// Azure authentication method for Content Safety. Use `azure: {}` for
-	// implicit Azure credential discovery.
+type PromptGuardAuth struct {
+	// Azure authentication method. Use `azure: {}` for implicit Azure
+	// credential discovery.
 	// +optional
 	Azure *AzureAuth `json:"azure,omitempty"`
 
-	// Inline Content Safety resource key. This option is the least secure;
-	// usage of a `Secret` is preferred.
+	// Inline key. This option is the least secure; usage of a `Secret` is
+	// preferred.
 	// +kubebuilder:validation:MaxLength=2048
 	// +optional
 	InlineKey *string `json:"key,omitempty"`
 
-	// Credential source for the Content Safety resource key, defaulting to a
-	// Kubernetes `Secret`. By default, the value is read from the
-	// `Authorization` key; set `secretRef.key` to override it.
+	// Credential source for the key, defaulting to a Kubernetes `Secret`. By
+	// default, the value is read from the `Authorization` key; set
+	// `secretRef.key` to override it.
 	// +optional
 	SecretRef *LocalSecretKeyRef `json:"secretRef,omitempty"`
 
-	// Where resource keys are inserted. Defaults to the
-	// `Ocp-Apim-Subscription-Key` header. Applies to `key` and `secretRef`.
+	// Where keys are inserted. Applies to `key` and `secretRef`. For
+	// `azureContentSafety`, defaults to the `Ocp-Apim-Subscription-Key` header.
 	// +optional
 	Location *AuthorizationLocation `json:"location,omitempty"`
 }
 
-func (a *AzureContentSafetyAuth) BackendAuth() *BackendAuth {
+func (a *PromptGuardAuth) BackendAuth() *BackendAuth {
 	if a == nil {
 		return nil
 	}

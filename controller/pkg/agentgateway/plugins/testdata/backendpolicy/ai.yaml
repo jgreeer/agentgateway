@@ -76,9 +76,9 @@ spec:
               failureMode: FailOpen
               analyzeText:
                 severityThreshold: 4
-              policies:
-                auth:
-                  key: test-content-safety-key
+            policies:
+              auth:
+                key: test-content-safety-key
         request:
           - response:
               message: "regex rejected on request"
@@ -115,11 +115,11 @@ spec:
                 haltOnBlocklistHit: true
               detectJailbreak:
                 apiVersion: "2024-02-15-preview"
-              policies:
-                auth:
-                  azure:
-                    managedIdentity:
-                      clientId: my-client-id
+            policies:
+              auth:
+                azure:
+                  managedIdentity:
+                    clientId: my-client-id
           - webhook:
               backendRef:
                 name: webhook
